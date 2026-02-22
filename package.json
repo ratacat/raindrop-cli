@@ -1,0 +1,26 @@
+{
+  "name": "raindrop-cli",
+  "version": "0.1.0",
+  "description": "Robot-centric CLI for Raindrop.io",
+  "type": "module",
+  "license": "MIT",
+  "module": "src/cli.ts",
+  "bin": {
+    "rain": "./src/cli.ts"
+  },
+  "scripts": {
+    "dev": "bun --watch src/cli.ts",
+    "start": "bun src/cli.ts",
+    "test": "bun test",
+    "typecheck": "bunx tsc --noEmit",
+    "build": "bun build ./src/cli.ts --target bun --outdir dist",
+    "build:compile": "bun build ./src/cli.ts --compile --outfile dist/rain"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "bun": ">=1.3.0"
+  }
+}
