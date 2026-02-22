@@ -167,7 +167,7 @@ rain update 483920 --important true              # mark as favorite
 rain update 483920 --note "Agent reviewed 2024-06-15"
 ```
 
-Batch update via stdin (IDs from stdin replace positional `<id>`). The bulk update endpoint natively appends tags, so `+` prefix is unnecessary but kept for consistency. Note: batch mode only supports tag addition (`+`); tag removal (`-`) and replacement (`=`) require per-item API calls, so they are not supported in batch mode. Include `--all` when you truly mean the whole collection:
+Batch update via stdin (IDs from stdin replace positional `<id>`). The bulk update endpoint natively appends tags, so `+` prefix is unnecessary but kept for consistency. Note: batch mode only supports tag addition (`+`); tag removal (`-`) and replacement (`=`) require per-item API calls, so they are not supported in batch mode. The API may limit `ids` array size; auto-chunk similarly to batch create if needed. Include `--all` when you truly mean the whole collection:
 ```bash
 rain ls --all --ids-only --notag --json | jq -r '.data[]' | rain update --tags +needs-review
 ```
@@ -387,7 +387,7 @@ Useful for inspection before saving. To act on suggestions directly, use `rain a
 
 ### rain highlights [collection]
 
-List highlights (annotations) across bookmarks. Color filtering is applied client-side.
+List highlights (annotations) across bookmarks. Color filtering is applied client-side after the API returns results, so `--color` combined with `--limit` may return fewer items than the limit (the limit applies to the API fetch, not the filtered output).
 
 ```bash
 rain highlights                       # all highlights
@@ -406,7 +406,7 @@ rain highlights --limit 50
       "text": "The key insight is...",
       "note": "Important for our architecture",
       "color": "yellow",
-      "raindrop": {"id": 483920, "title": "Article Title"},
+      "title": "Article Title",
       "link": "https://example.com/article",
       "created": "2024-06-15T10:30:00Z"
     }
@@ -416,7 +416,7 @@ rain highlights --limit 50
 
 ### rain export [collection]
 
-Bulk export for offline analysis. Uses the list endpoint with auto-pagination. Supports `--fields` for column selection and `--format csv` for CSV output (generated client-side from the JSON data).
+Bulk export for offline analysis. Uses the list endpoint with auto-pagination (not the dedicated export API, which returns opaque file downloads without field selection or JSON output). Supports `--fields` for column selection and `--format csv` for CSV output (generated client-side from the JSON data).
 
 ```bash
 rain export                              # all bookmarks as JSON (auto-paginates list endpoint)
@@ -427,7 +427,7 @@ rain export --fields id,title,link,tags  # select fields
 
 ### rain watch --since <timestamp>
 
-Poll for changes since a timestamp (ISO 8601 UTC, e.g. `2024-06-15T00:00:00Z`). Implemented client-side: sort by `-lastUpdate` and paginate until all bookmarks older than the cutoff are reached. Since concurrent updates can shift items between pages during pagination, subtract a small safety margin (e.g. 60s) from the cutoff and de-dup results by bookmark ID. `rain status` can be used as a cheap pre-check (`lastChanged`) before a full scan.
+Poll for changes since a timestamp (ISO 8601 UTC, e.g. `2024-06-15T00:00:00Z`). Implemented client-side: sort by `-lastUpdate` and paginate until all bookmarks older than the cutoff are reached. (Note: `-lastUpdate` appears in user config sort options but isn't explicitly listed in the API's documented sort values — verify against the live API; if unavailable, the fallback is full pagination with client-side date filtering, which is more expensive.) Since concurrent updates can shift items between pages during pagination, subtract a small safety margin (e.g. 60s) from the cutoff and de-dup results by bookmark ID. `rain status` can be used as a cheap pre-check (`lastChanged`) before a full scan.
 
 ```bash
 rain watch --since 2024-06-15T00:00:00Z
