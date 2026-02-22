@@ -36,7 +36,10 @@ rain help
 bun run start -- <args>   # run CLI entrypoint
 bun run dev -- <args>     # watch mode
 bun run typecheck         # TypeScript checks
-bun run test              # Bun test suite
+bun run test              # smoke suite (green baseline)
+bun run test:all          # smoke + contract tests
+bun run test:smoke        # bootstrap/smoke suite
+bun run test:contracts    # full contract behavior suite (red until implementation)
 bun run build             # bundle to dist/cli.js
 bun run build:compile     # native executable at dist/rain
 ```
@@ -53,4 +56,5 @@ Current tests cover:
 
 - default help output
 - version output
-- unknown-command error/exit behavior
+
+Full planned coverage matrix lives in `tests/README.md`.
