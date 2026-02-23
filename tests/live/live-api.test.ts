@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { runRain } from "../helpers/run-rain";
 
 const DEFAULT_BASE = "https://api.raindrop.io/rest/v1";
 const ENABLED = process.env.RAIN_LIVE_TESTS === "1";
@@ -62,5 +63,20 @@ describe("raindrop live api (opt-in)", () => {
     expect(payload.result).toBe(true);
     expect(Array.isArray(payload.items)).toBe(true);
     expect(payload.items && payload.items.length).toBeGreaterThanOrEqual(0);
+  });
+
+  test("cli ls works against live API", async () => {
+    const result = await runRain(["ls", "--limit", "1", "--json"], {
+      env: {
+        RAINDROP_TOKEN: TOKEN,
+        RAINDROP_API_BASE: BASE_URL
+      }
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toBe("");
+    const payload = JSON.parse(result.stdout) as { ok?: boolean; data?: unknown };
+    expect(payload.ok).toBe(true);
+    expect(Array.isArray(payload.data)).toBe(true);
   });
 });

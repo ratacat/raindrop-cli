@@ -825,6 +825,7 @@ async function cmdLs(args: string[]): Promise<void> {
   const brokenOnly = parsed.values.broken === true;
   const limit = parseOptionalInteger(parsed.values.limit, "limit") ?? 25;
   const startPage = parseOptionalInteger(parsed.values.page, "page") ?? 0;
+  const collectionId = collection ?? 0;
   const sort = typeof parsed.values.sort === "string" ? parsed.values.sort : "-created";
   const tag = typeof parsed.values.tag === "string" ? parsed.values.tag : undefined;
   const type = typeof parsed.values.type === "string" ? parsed.values.type : undefined;
@@ -843,10 +844,12 @@ async function cmdLs(args: string[]): Promise<void> {
 
   try {
     while (true) {
-      const response = await requestJson("GET", "/raindrops", token, {
+      const response = await requestJson("GET", `/raindrops/${collectionId}`, token, {
         query: {
+          // Keep legacy query keys for compatibility with existing contract tests.
           collection,
           limit,
+          perpage: limit,
           page,
           sort,
           search: searchParts.length > 0 ? searchParts.join(" ") : undefined
@@ -868,7 +871,7 @@ async function cmdLs(args: string[]): Promise<void> {
     if (idsOnly) {
       outputSuccess(
         results
-          .map((item) => item.id)
+          .map((item) => (typeof item.id === "number" ? item.id : item._id))
           .filter((id): id is number => typeof id === "number"),
         { count: results.length, page: startPage, total: results.length }
       );
