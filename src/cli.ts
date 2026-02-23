@@ -299,7 +299,8 @@ function apiBaseUrl(): string {
 
 function buildUrl(pathname: string, query?: Record<string, string | number | boolean | undefined>): URL {
   const base = apiBaseUrl();
-  const url = new URL(pathname, base.endsWith("/") ? base : `${base}/`);
+  const normalizedPath = pathname.replace(/^\/+/, "");
+  const url = new URL(normalizedPath, base.endsWith("/") ? base : `${base}/`);
   if (query) {
     for (const [key, value] of Object.entries(query)) {
       if (typeof value === "undefined") continue;

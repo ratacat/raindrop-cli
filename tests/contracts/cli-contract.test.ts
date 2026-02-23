@@ -262,6 +262,24 @@ describe("rain cli contract", () => {
         expectSuccess(result);
       });
     });
+
+    test("preserves API base path prefix when building request URLs", async () => {
+      await withMockRaindrop(async (server) => {
+        server.all("/rest/v1/*", (request) => {
+          expect(request.pathname).toBe("/rest/v1/search");
+          return { json: { items: [SAMPLE_BOOKMARK], count: 1, page: 0 } };
+        });
+
+        const result = await runRain(["search", "typescript", "--json"], {
+          env: {
+            RAINDROP_TOKEN: "test-token",
+            RAINDROP_API_BASE: `${server.baseUrl}/rest/v1`
+          }
+        });
+
+        expectSuccess(result);
+      });
+    });
   });
 
   describe("get", () => {
