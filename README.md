@@ -57,6 +57,16 @@ rain help
 Regardless of which install path you choose, you must configure a Raindrop token before real API commands will work.
 See `Authentication` below.
 
+Quick `rain` examples:
+
+```bash
+rain robot-docs --json                  # robot help / schema
+rain search "typescript" --json         # search bookmarks
+rain get 123456 --json                  # fetch a bookmark by id
+rain add "https://example.com" --json   # add a bookmark
+rain ls --limit 10 --json               # list recent bookmarks
+```
+
 ## Authentication
 
 `rain` reads auth in this order:
