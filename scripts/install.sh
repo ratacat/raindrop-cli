@@ -5,6 +5,15 @@ REPO_ARCHIVE_URL="${RAIN_INSTALL_URL:-https://codeload.github.com/ratacat/raindr
 INSTALL_ROOT="${RAIN_INSTALL_ROOT:-$HOME/.local/share/raindrop-cli}"
 BIN_DIR="${RAIN_BIN_DIR:-$HOME/.local/bin}"
 WRAPPER_PATH="$BIN_DIR/rain"
+TMP_DIR=""
+
+cleanup() {
+  if [[ -n "${TMP_DIR:-}" && -d "${TMP_DIR:-}" ]]; then
+    rm -rf "$TMP_DIR"
+  fi
+}
+
+trap cleanup EXIT
 
 need_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -37,16 +46,14 @@ main() {
   need_cmd find
   install_bun_if_missing
 
-  local tmp_dir
-  tmp_dir="$(mktemp -d)"
-  trap 'rm -rf "$tmp_dir"' EXIT
+  TMP_DIR="$(mktemp -d)"
 
   echo "Downloading raindrop-cli..."
-  curl -fsSL "$REPO_ARCHIVE_URL" -o "$tmp_dir/raindrop-cli.tgz"
-  tar -xzf "$tmp_dir/raindrop-cli.tgz" -C "$tmp_dir"
+  curl -fsSL "$REPO_ARCHIVE_URL" -o "$TMP_DIR/raindrop-cli.tgz"
+  tar -xzf "$TMP_DIR/raindrop-cli.tgz" -C "$TMP_DIR"
 
   local extracted_dir
-  extracted_dir="$(find "$tmp_dir" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+  extracted_dir="$(find "$TMP_DIR" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
   if [[ -z "$extracted_dir" || ! -d "$extracted_dir" ]]; then
     echo "Error: could not locate extracted project directory." >&2
     exit 1

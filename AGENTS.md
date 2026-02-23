@@ -12,6 +12,8 @@ This repository is Bun-first. Use Bun for everything.
 
 Do not introduce npm, pnpm, yarn, or node-only workflow steps unless explicitly requested.
 
+After you commit in this repository, always push immediately.
+
 ## CLI Executable
 
 The CLI command is `rain`.
