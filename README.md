@@ -1,5 +1,8 @@
 # raindrop-cli
 
+[![Coverage](https://codecov.io/gh/ratacat/raindrop-cli/branch/main/graph/badge.svg)](https://codecov.io/gh/ratacat/raindrop-cli)
+![Bun](https://img.shields.io/badge/runtime-bun-%23fbf0df?logo=bun)
+
 `rain` is a Bun-first CLI for Raindrop.io that is designed for **AI/agent integration first**, not hand-crafted interactive terminal use.
 
 It provides stable, machine-readable JSON envelopes and predictable exit codes so LLM agents, scripts, and automations can reliably compose bookmark workflows.
