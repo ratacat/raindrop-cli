@@ -51,6 +51,18 @@ rain help
 1. `RAINDROP_TOKEN`
 2. `~/.config/rain/token`
 
+For personal/private use, generate a **Test Token** in Raindrop:
+
+1. Go to `app.raindrop.io`
+2. Open `Settings`
+3. Open `Integrations`
+4. Create an app
+5. Create a **Test Token** under that app
+
+Use that test token as your `RAINDROP_TOKEN`.
+
+`client_id` and `client_secret` are for OAuth apps used by other users. For your own account automation, test token is the simplest path.
+
 Recommended local setup:
 
 ```bash
