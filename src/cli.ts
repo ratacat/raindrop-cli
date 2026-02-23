@@ -3,7 +3,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const VERSION = "0.1.0";
+const VERSION = "0.1.1";
 const DEFAULT_API_BASE = "https://api.raindrop.io/rest/v1";
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [k: string]: JsonValue };
