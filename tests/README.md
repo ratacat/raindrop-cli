@@ -22,6 +22,11 @@ This directory defines the full test plan for `rain` before feature implementati
 3. Helpers (`tests/helpers`)
 - Shared subprocess harness for invoking `rain` with args/env.
 
+4. Live (`tests/live`)
+- Optional real-API checks using a real token from environment.
+- Read-only assertions intended to verify auth and baseline endpoint health.
+- Disabled by default unless explicitly enabled.
+
 ## Coverage Expectations By Command
 
 - `search`: query semantics, default sort, pagination, empty-result behavior.
@@ -59,4 +64,13 @@ This directory defines the full test plan for `rain` before feature implementati
 bun run test
 bun run test:all
 bun run test:contracts
+bun run test:live
+```
+
+Enable live tests:
+
+```bash
+export RAIN_LIVE_TESTS=1
+export RAINDROP_LIVE_TOKEN="<token>"
+bun run test:live
 ```

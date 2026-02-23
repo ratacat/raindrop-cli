@@ -15,6 +15,7 @@
     "test:all": "bun test",
     "test:smoke": "bun test tests/smoke",
     "test:contracts": "bun test tests/contracts",
+    "test:live": "bun test tests/live",
     "typecheck": "bunx tsc --noEmit",
     "build": "bun build ./src/cli.ts --target bun --outdir dist",
     "build:compile": "bun build ./src/cli.ts --compile --outfile dist/rain"

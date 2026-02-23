@@ -39,7 +39,8 @@ bun run typecheck         # TypeScript checks
 bun run test              # smoke suite (green baseline)
 bun run test:all          # smoke + contract tests
 bun run test:smoke        # bootstrap/smoke suite
-bun run test:contracts    # full contract behavior suite (red until implementation)
+bun run test:contracts    # full contract behavior suite
+bun run test:live         # opt-in live API checks (requires env vars)
 bun run build             # bundle to dist/cli.js
 bun run build:compile     # native executable at dist/rain
 ```
@@ -58,3 +59,17 @@ Current tests cover:
 - version output
 
 Full planned coverage matrix lives in `tests/README.md`.
+
+### Optional Live Tests
+
+Live tests are disabled by default and are read-only.
+
+```bash
+export RAIN_LIVE_TESTS=1
+export RAINDROP_LIVE_TOKEN="<your-test-token>"
+bun run test:live
+```
+
+Optional:
+
+- `RAINDROP_API_BASE` to target a non-default API URL.
