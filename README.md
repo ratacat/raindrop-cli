@@ -4,6 +4,8 @@
 
 It provides stable, machine-readable JSON envelopes and predictable exit codes so LLM agents, scripts, and automations can reliably compose bookmark workflows.
 
+[Raindrop.io](https://raindrop.io) is a cloud bookmark manager and read-later service, and one of the best free bookmark managers out there.
+
 ## Who It Is For
 
 - AI agents and tool-calling systems
