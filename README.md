@@ -21,11 +21,11 @@ If you want a human-centric TUI or rich interactive prompts, this project is not
 
 ## Installation
 
-Prerequisite:
+Bun is required at runtime. The one-line installer can install Bun automatically if missing.
 
-- Bun `>=1.3.0`
+Choose one installation path:
 
-One-line installer:
+### Option A: One-line installer
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/ratacat/raindrop-cli/main/scripts/install.sh | bash
@@ -34,9 +34,10 @@ curl -fsSL https://raw.githubusercontent.com/ratacat/raindrop-cli/main/scripts/i
 This installs project files to `~/.local/share/raindrop-cli` and creates `~/.local/bin/rain`.
 Run the same command again to update.
 
-Install dependencies:
+### Option B: Manual install
 
 ```bash
+# clone first (if needed), then:
 bun install
 ```
 
@@ -52,6 +53,9 @@ Expose `rain` in your shell:
 bun link
 rain help
 ```
+
+Regardless of which install path you choose, you must configure a Raindrop token before real API commands will work.
+See `Authentication` below.
 
 ## Authentication
 
@@ -81,6 +85,8 @@ chmod 600 ~/.config/rain/token
 ```
 
 ## Quickstart
+
+Set your token first (`RAINDROP_TOKEN` or `~/.config/rain/token`), then:
 
 ```bash
 # verify CLI wiring
