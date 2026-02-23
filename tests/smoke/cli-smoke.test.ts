@@ -11,8 +11,8 @@ describe("rain cli smoke", () => {
 
   for (const args of helpInputs) {
     const label = args.length === 0 ? "<empty>" : args.join(" ");
-    test(`shows help for ${label}`, () => {
-      const result = runRain(args);
+    test(`shows help for ${label}`, async () => {
+      const result = await runRain(args);
       expect(result.exitCode).toBe(0);
       expect(result.stderr).toBe("");
       expect(result.stdout).toContain("Usage:");
@@ -23,8 +23,8 @@ describe("rain cli smoke", () => {
   const versionInputs = [["version"], ["--version"], ["-v"]];
 
   for (const args of versionInputs) {
-    test(`shows package version for ${args[0]}`, () => {
-      const result = runRain(args);
+    test(`shows package version for ${args[0]}`, async () => {
+      const result = await runRain(args);
       expect(result.exitCode).toBe(0);
       expect(result.stderr).toBe("");
       expect(result.stdout.trim()).toBe(packageJson.version);

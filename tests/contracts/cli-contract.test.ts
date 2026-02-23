@@ -18,10 +18,10 @@ const SAMPLE_BOOKMARK = {
   important: false
 };
 
-function withTempHome(callback: (homeDir: string) => void): void {
+async function withTempHome(callback: (homeDir: string) => Promise<void> | void): Promise<void> {
   const homeDir = mkdtempSync(join(tmpdir(), "rain-home-"));
   try {
-    callback(homeDir);
+    await callback(homeDir);
   } finally {
     rmSync(homeDir, { recursive: true, force: true });
   }
@@ -29,36 +29,36 @@ function withTempHome(callback: (homeDir: string) => void): void {
 
 describe("rain cli contract", () => {
   describe("global behavior", () => {
-    test("returns INVALID_ARGS + exit 2 for unknown flags", () => {
-      const result = runRain(["search", "typescript", "--wat", "--json"]);
+    test("returns INVALID_ARGS + exit 2 for unknown flags", async () => {
+      const result = await runRain(["search", "typescript", "--wat", "--json"]);
       expectError(result, "INVALID_ARGS", 2);
     });
 
-    test("returns INVALID_ARGS + exit 2 for malformed numeric ids", () => {
-      const result = runRain(["get", "abc123", "--json"]);
+    test("returns INVALID_ARGS + exit 2 for malformed numeric ids", async () => {
+      const result = await runRain(["get", "abc123", "--json"]);
       expectError(result, "INVALID_ARGS", 2);
     });
 
-    test("returns INVALID_ARGS + exit 2 for malformed timestamps", () => {
-      const result = runRain(["watch", "--since", "yesterday", "--json"]);
+    test("returns INVALID_ARGS + exit 2 for malformed timestamps", async () => {
+      const result = await runRain(["watch", "--since", "yesterday", "--json"]);
       expectError(result, "INVALID_ARGS", 2);
     });
 
-    test("uses INVALID_ARGS for unknown commands", () => {
-      const result = runRain(["this-command-does-not-exist", "--json"]);
+    test("uses INVALID_ARGS for unknown commands", async () => {
+      const result = await runRain(["this-command-does-not-exist", "--json"]);
       expectError(result, "INVALID_ARGS", 2);
     });
 
-    test("forces JSON envelope with --json", () => {
-      const result = runRain(["robot-docs", "--json"]);
+    test("forces JSON envelope with --json", async () => {
+      const result = await runRain(["robot-docs", "--json"]);
       const payload = parseJson(result) as { ok: boolean; data?: unknown };
       expect(payload.ok).toBe(true);
       expect(payload).toHaveProperty("data");
       expect(result.stdout.startsWith("{")).toBe(true);
     });
 
-    test("error envelopes include message and suggest guidance", () => {
-      const result = runRain(["this-command-does-not-exist", "--json"]);
+    test("error envelopes include message and suggest guidance", async () => {
+      const result = await runRain(["this-command-does-not-exist", "--json"]);
       const payload = parseJson(result) as {
         ok: boolean;
         error: { code: string; message: string; suggest?: string[] };
@@ -70,8 +70,8 @@ describe("rain cli contract", () => {
       expect(payload.error.suggest?.length ?? 0).toBeGreaterThan(0);
     });
 
-    test("rejects unsupported flag combinations with INVALID_ARGS", () => {
-      const result = runRain(["tags", "--ids-only", "--json"]);
+    test("rejects unsupported flag combinations with INVALID_ARGS", async () => {
+      const result = await runRain(["tags", "--ids-only", "--json"]);
       expectError(result, "INVALID_ARGS", 2);
     });
   });
@@ -79,7 +79,7 @@ describe("rain cli contract", () => {
   describe("auth + config", () => {
     test("returns AUTH_MISSING + exit 3 when no token source exists", async () => {
       await withMockRaindrop(async (server) => {
-        const result = runRain(["search", "typescript", "--json"], {
+        const result = await runRain(["search", "typescript", "--json"], {
           env: {
             RAINDROP_TOKEN: undefined,
             RAINDROP_API_BASE: server.baseUrl
@@ -100,7 +100,7 @@ describe("rain cli contract", () => {
           };
         });
 
-        const result = runRain(["search", "typescript", "--json"], {
+        const result = await runRain(["search", "typescript", "--json"], {
           env: authEnv(server.baseUrl, "env-token")
         });
 
@@ -111,7 +111,7 @@ describe("rain cli contract", () => {
 
     test("falls back to ~/.config/rain/token file when env is absent", async () => {
       await withMockRaindrop(async (server) => {
-        withTempHome((homeDir) => {
+        await withTempHome(async (homeDir) => {
           const configDir = join(homeDir, ".config", "rain");
           mkdirSync(configDir, { recursive: true });
           writeFileSync(join(configDir, "token"), "file-token\n", "utf8");
@@ -121,7 +121,7 @@ describe("rain cli contract", () => {
             return { json: { items: [SAMPLE_BOOKMARK], count: 1 } };
           });
 
-          const result = runRain(["search", "typescript", "--json"], {
+          const result = await runRain(["search", "typescript", "--json"], {
             env: {
               HOME: homeDir,
               RAINDROP_TOKEN: undefined,
@@ -136,7 +136,7 @@ describe("rain cli contract", () => {
 
     test("prefers env token over token file when both exist", async () => {
       await withMockRaindrop(async (server) => {
-        withTempHome((homeDir) => {
+        await withTempHome(async (homeDir) => {
           const configDir = join(homeDir, ".config", "rain");
           mkdirSync(configDir, { recursive: true });
           writeFileSync(join(configDir, "token"), "file-token\n", "utf8");
@@ -146,7 +146,7 @@ describe("rain cli contract", () => {
             return { json: { items: [SAMPLE_BOOKMARK], count: 1 } };
           });
 
-          const result = runRain(["search", "typescript", "--json"], {
+          const result = await runRain(["search", "typescript", "--json"], {
             env: {
               HOME: homeDir,
               RAINDROP_TOKEN: "env-token",
@@ -167,7 +167,7 @@ describe("rain cli contract", () => {
           json: { items: [SAMPLE_BOOKMARK], count: 1, page: 0 }
         }));
 
-        const result = runRain(["search", "typescript testing", "--json"], {
+        const result = await runRain(["search", "typescript testing", "--json"], {
           env: authEnv(server.baseUrl)
         });
 
@@ -183,7 +183,7 @@ describe("rain cli contract", () => {
           return { json: { items: [], count: 0, page: 0 } };
         });
 
-        const result = runRain(["search", "typescript testing", "--json"], {
+        const result = await runRain(["search", "typescript testing", "--json"], {
           env: authEnv(server.baseUrl)
         });
 
@@ -199,7 +199,7 @@ describe("rain cli contract", () => {
           return { json: { items: [], count: 0, page: 0 } };
         });
 
-        const result = runRain(["search", "#api", "--json"], {
+        const result = await runRain(["search", "#api", "--json"], {
           env: authEnv(server.baseUrl)
         });
 
@@ -215,7 +215,7 @@ describe("rain cli contract", () => {
           return { json: { items: [SAMPLE_BOOKMARK], count: 1, page: 0 } };
         });
 
-        const result = runRain(["search", "typescript", "--sort", "-created", "--collection", "12345", "--json"], {
+        const result = await runRain(["search", "typescript", "--sort", "-created", "--collection", "12345", "--json"], {
           env: authEnv(server.baseUrl)
         });
 
@@ -231,7 +231,7 @@ describe("rain cli contract", () => {
           return { json: { items: [SAMPLE_BOOKMARK], count: 1, page: 2 } };
         });
 
-        const result = runRain(["search", "typescript", "--limit", "10", "--page", "2", "--json"], {
+        const result = await runRain(["search", "typescript", "--limit", "10", "--page", "2", "--json"], {
           env: authEnv(server.baseUrl)
         });
 
@@ -242,7 +242,7 @@ describe("rain cli contract", () => {
     test("search with no matches remains success exit 0 with empty data", async () => {
       await withMockRaindrop(async (server) => {
         server.all("/*", () => ({ json: { items: [], count: 0, page: 0 } }));
-        const result = runRain(["search", "nothing-should-match", "--json"], {
+        const result = await runRain(["search", "nothing-should-match", "--json"], {
           env: authEnv(server.baseUrl)
         });
         const payload = expectSuccess(result);
@@ -256,7 +256,7 @@ describe("rain cli contract", () => {
           expect(request.query.get("fields")).toBe("id,title,link");
           return { json: { items: [{ id: SAMPLE_BOOKMARK.id, title: SAMPLE_BOOKMARK.title, link: SAMPLE_BOOKMARK.link }], count: 1, page: 0 } };
         });
-        const result = runRain(["search", "typescript", "--fields", "id,title,link", "--json"], {
+        const result = await runRain(["search", "typescript", "--fields", "id,title,link", "--json"], {
           env: authEnv(server.baseUrl)
         });
         expectSuccess(result);
@@ -268,7 +268,7 @@ describe("rain cli contract", () => {
     test("returns a single bookmark by id", async () => {
       await withMockRaindrop(async (server) => {
         server.all("/raindrop/*", () => ({ json: { item: SAMPLE_BOOKMARK } }));
-        const result = runRain(["get", "483920", "--json"], { env: authEnv(server.baseUrl) });
+        const result = await runRain(["get", "483920", "--json"], { env: authEnv(server.baseUrl) });
         const payload = expectSuccess(result);
         expect(payload.data).toBeTruthy();
       });
@@ -281,7 +281,7 @@ describe("rain cli contract", () => {
           return { json: { item: { title: SAMPLE_BOOKMARK.title, link: SAMPLE_BOOKMARK.link, tags: SAMPLE_BOOKMARK.tags } } };
         });
 
-        const result = runRain(["get", "483920", "--fields", "title,link,tags", "--json"], {
+        const result = await runRain(["get", "483920", "--fields", "title,link,tags", "--json"], {
           env: authEnv(server.baseUrl)
         });
 
@@ -292,7 +292,7 @@ describe("rain cli contract", () => {
     test("returns NOT_FOUND + exit 1 when resource is missing", async () => {
       await withMockRaindrop(async (server) => {
         server.all("/raindrop/*", () => ({ status: 404, json: { error: "not found" } }));
-        const result = runRain(["get", "999999", "--json"], { env: authEnv(server.baseUrl) });
+        const result = await runRain(["get", "999999", "--json"], { env: authEnv(server.baseUrl) });
         expectError(result, "NOT_FOUND", 1);
       });
     });
@@ -302,7 +302,7 @@ describe("rain cli contract", () => {
     test("creates a bookmark for add <url>", async () => {
       await withMockRaindrop(async (server) => {
         server.all("/*", () => ({ json: { item: { id: 483921, link: "https://example.com" } } }));
-        const result = runRain(["add", "https://example.com", "--json"], {
+        const result = await runRain(["add", "https://example.com", "--json"], {
           env: authEnv(server.baseUrl)
         });
         expectSuccess(result);
@@ -315,7 +315,7 @@ describe("rain cli contract", () => {
           expect(request.query.get("parse")).toBe("true");
           return { json: { item: { id: 1, link: "https://example.com" } } };
         });
-        const result = runRain(["add", "https://example.com", "--parse", "--json"], {
+        const result = await runRain(["add", "https://example.com", "--parse", "--json"], {
           env: authEnv(server.baseUrl)
         });
         expectSuccess(result);
@@ -330,7 +330,7 @@ describe("rain cli contract", () => {
           return { json: { items: [{ id: 1, link: "https://a.com" }, { id: 2, link: "https://b.com" }] } };
         });
 
-        const result = runRain(["add", "--tags", "research", "--json"], {
+        const result = await runRain(["add", "--tags", "research", "--json"], {
           env: authEnv(server.baseUrl),
           stdin: "https://a.com\nhttps://b.com\n"
         });
@@ -352,7 +352,7 @@ describe("rain cli contract", () => {
           return { json: { item: { id: 7777, link: "https://example.com/article" } } };
         });
 
-        const result = runRain(["add", "https://example.com/article", "--from-suggest", "--json"], {
+        const result = await runRain(["add", "https://example.com/article", "--from-suggest", "--json"], {
           env: authEnv(server.baseUrl)
         });
 
@@ -375,7 +375,7 @@ describe("rain cli contract", () => {
           return { json: { item: { id: 9999, link: "https://example.com/fallback" } } };
         });
 
-        const result = runRain(["add", "https://example.com/fallback", "--from-suggest", "--json"], {
+        const result = await runRain(["add", "https://example.com/fallback", "--from-suggest", "--json"], {
           env: authEnv(server.baseUrl)
         });
 
@@ -391,7 +391,7 @@ describe("rain cli contract", () => {
           return { json: { items: [{ id: 1, link: "https://a.com" }, { id: 2, link: "https://b.com" }] } };
         });
 
-        const result = runRain(["add", "--json"], {
+        const result = await runRain(["add", "--json"], {
           env: authEnv(server.baseUrl),
           stdin: '{"link":"https://a.com","tags":["api"]}\n{"link":"https://b.com","tags":["docs"],"collection":123}\n'
         });
@@ -406,7 +406,7 @@ describe("rain cli contract", () => {
           return { json: { items: [{ id: 1, link: "https://trimmed-jsonl.com" }] } };
         });
 
-        const result = runRain(["add", "--json"], {
+        const result = await runRain(["add", "--json"], {
           env: authEnv(server.baseUrl),
           stdin: '   {"link":"https://trimmed-jsonl.com","tags":["api"]}\n'
         });
@@ -418,7 +418,7 @@ describe("rain cli contract", () => {
       await withMockRaindrop(async (server) => {
         server.all("/*", () => ({ json: { items: [] } }));
         const stdin = Array.from({ length: 205 }, (_, index) => `https://example.com/${index}`).join("\n");
-        const result = runRain(["add", "--json"], {
+        const result = await runRain(["add", "--json"], {
           env: authEnv(server.baseUrl),
           stdin
         });
@@ -431,7 +431,7 @@ describe("rain cli contract", () => {
       await withMockRaindrop(async (server) => {
         server.all("/*", () => ({ json: { items: [] } }));
         const stdin = Array.from({ length: 100 }, (_, index) => `https://exact-100.com/${index}`).join("\n");
-        const result = runRain(["add", "--json"], {
+        const result = await runRain(["add", "--json"], {
           env: authEnv(server.baseUrl),
           stdin
         });
@@ -448,7 +448,7 @@ describe("rain cli contract", () => {
           expect(request.text).toContain("\"title\":\"New Title\"");
           return { json: { item: { ...SAMPLE_BOOKMARK, title: "New Title" } } };
         });
-        const result = runRain(["update", "483920", "--title", "New Title", "--json"], {
+        const result = await runRain(["update", "483920", "--title", "New Title", "--json"], {
           env: authEnv(server.baseUrl)
         });
         expectSuccess(result);
@@ -463,7 +463,7 @@ describe("rain cli contract", () => {
           return { json: { item: { ...SAMPLE_BOOKMARK, tags: ["api", "new"] } } };
         });
 
-        const result = runRain(["update", "483920", "--tags", "+new,-testing", "--json"], {
+        const result = await runRain(["update", "483920", "--tags", "+new,-testing", "--json"], {
           env: authEnv(server.baseUrl)
         });
 
@@ -480,7 +480,7 @@ describe("rain cli contract", () => {
           return { json: { item: { ...SAMPLE_BOOKMARK, tags: ["only", "these"] } } };
         });
 
-        const result = runRain(["update", "483920", "--tags", "=only,these", "--json"], {
+        const result = await runRain(["update", "483920", "--tags", "=only,these", "--json"], {
           env: authEnv(server.baseUrl)
         });
 
@@ -497,7 +497,7 @@ describe("rain cli contract", () => {
           return { json: { result: true } };
         });
 
-        const result = runRain(["update", "--tags", "+needs-review", "--json"], {
+        const result = await runRain(["update", "--tags", "+needs-review", "--json"], {
           env: authEnv(server.baseUrl),
           stdin: "1\n2\n3\n"
         });
@@ -509,20 +509,20 @@ describe("rain cli contract", () => {
     test("update returns NOT_FOUND + exit 1 for missing resource", async () => {
       await withMockRaindrop(async (server) => {
         server.on("PUT", "/raindrop/999999", () => ({ status: 404, json: { error: "not found" } }));
-        const result = runRain(["update", "999999", "--title", "Missing", "--json"], {
+        const result = await runRain(["update", "999999", "--title", "Missing", "--json"], {
           env: authEnv(server.baseUrl)
         });
         expectError(result, "NOT_FOUND", 1);
       });
     });
 
-    test("batch stdin mode rejects -remove/=replace tag operations", () => {
-      const removeResult = runRain(["update", "--tags", "-legacy", "--json"], {
+    test("batch stdin mode rejects -remove/=replace tag operations", async () => {
+      const removeResult = await runRain(["update", "--tags", "-legacy", "--json"], {
         stdin: "1\n2\n3\n"
       });
       expectError(removeResult, "INVALID_ARGS", 2);
 
-      const replaceResult = runRain(["update", "--tags", "=only,these", "--json"], {
+      const replaceResult = await runRain(["update", "--tags", "=only,these", "--json"], {
         stdin: "1\n2\n3\n"
       });
       expectError(replaceResult, "INVALID_ARGS", 2);
@@ -533,7 +533,7 @@ describe("rain cli contract", () => {
     test("moves bookmark to trash by default", async () => {
       await withMockRaindrop(async (server) => {
         server.all("/*", () => ({ json: { result: true } }));
-        const result = runRain(["rm", "483920", "--json"], { env: authEnv(server.baseUrl) });
+        const result = await runRain(["rm", "483920", "--json"], { env: authEnv(server.baseUrl) });
         expectSuccess(result);
       });
     });
@@ -541,7 +541,7 @@ describe("rain cli contract", () => {
     test("permanent delete performs trash-then-delete flow", async () => {
       await withMockRaindrop(async (server) => {
         server.all("/*", () => ({ json: { result: true } }));
-        const result = runRain(["rm", "483920", "--permanent", "--json"], { env: authEnv(server.baseUrl) });
+        const result = await runRain(["rm", "483920", "--permanent", "--json"], { env: authEnv(server.baseUrl) });
         expectSuccess(result);
         expect(server.requests.length).toBeGreaterThanOrEqual(1);
       });
@@ -550,7 +550,7 @@ describe("rain cli contract", () => {
     test("returns NOT_FOUND + exit 1 for missing bookmark", async () => {
       await withMockRaindrop(async (server) => {
         server.all("/*", () => ({ status: 404, json: { error: "not found" } }));
-        const result = runRain(["rm", "999999", "--json"], { env: authEnv(server.baseUrl) });
+        const result = await runRain(["rm", "999999", "--json"], { env: authEnv(server.baseUrl) });
         expectError(result, "NOT_FOUND", 1);
       });
     });
@@ -563,7 +563,7 @@ describe("rain cli contract", () => {
           expect(request.query.get("limit")).toBe("25");
           return { json: { items: [SAMPLE_BOOKMARK], count: 1, page: 0 } };
         });
-        const result = runRain(["ls", "--json"], { env: authEnv(server.baseUrl) });
+        const result = await runRain(["ls", "--json"], { env: authEnv(server.baseUrl) });
         expectSuccess(result);
       });
     });
@@ -576,7 +576,7 @@ describe("rain cli contract", () => {
           page += 1;
           return { json: payload };
         });
-        const result = runRain(["ls", "--all", "--json"], { env: authEnv(server.baseUrl) });
+        const result = await runRain(["ls", "--all", "--json"], { env: authEnv(server.baseUrl) });
         const payload = expectSuccess(result);
         expect(Array.isArray(payload.data)).toBe(true);
         expect(server.requests.length).toBe(3);
@@ -593,7 +593,7 @@ describe("rain cli contract", () => {
           return { json: { items: [SAMPLE_BOOKMARK], count: 1, page: 0 } };
         });
 
-        const result = runRain(["ls", "--tag", "api", "--type", "article", "--notag", "--json"], {
+        const result = await runRain(["ls", "--tag", "api", "--type", "article", "--notag", "--json"], {
           env: authEnv(server.baseUrl)
         });
         expectSuccess(result);
@@ -606,7 +606,7 @@ describe("rain cli contract", () => {
           expect(request.query.get("collection")).toBe("123");
           return { json: { items: [SAMPLE_BOOKMARK], count: 1, page: 0 } };
         });
-        const result = runRain(["ls", "123", "--json"], { env: authEnv(server.baseUrl) });
+        const result = await runRain(["ls", "123", "--json"], { env: authEnv(server.baseUrl) });
         expectSuccess(result);
       });
     });
@@ -617,7 +617,7 @@ describe("rain cli contract", () => {
           expect(request.query.get("search")).toContain("important:true");
           return { json: { items: [SAMPLE_BOOKMARK], count: 1, page: 0 } };
         });
-        const result = runRain(["ls", "--important", "--json"], { env: authEnv(server.baseUrl) });
+        const result = await runRain(["ls", "--important", "--json"], { env: authEnv(server.baseUrl) });
         expectSuccess(result);
       });
     });
@@ -634,7 +634,7 @@ describe("rain cli contract", () => {
             page: 0
           }
         }));
-        const result = runRain(["ls", "--broken", "--json"], { env: authEnv(server.baseUrl) });
+        const result = await runRain(["ls", "--broken", "--json"], { env: authEnv(server.baseUrl) });
         const payload = expectSuccess(result);
         expect(payload.data).toEqual([expect.objectContaining({ id: 1, broken: true })]);
       });
@@ -643,7 +643,7 @@ describe("rain cli contract", () => {
     test("returns number[] in --ids-only mode", async () => {
       await withMockRaindrop(async (server) => {
         server.all("/*", () => ({ json: { items: [{ id: 1 }, { id: 2 }] } }));
-        const result = runRain(["ls", "--ids-only", "--json"], { env: authEnv(server.baseUrl) });
+        const result = await runRain(["ls", "--ids-only", "--json"], { env: authEnv(server.baseUrl) });
         const payload = expectSuccess(result);
         expect(payload.data).toEqual([1, 2]);
       });
@@ -662,8 +662,8 @@ describe("rain cli contract", () => {
           }
         }));
 
-        const flat = runRain(["collections", "--json"], { env: authEnv(server.baseUrl) });
-        const tree = runRain(["collections", "--tree", "--json"], { env: authEnv(server.baseUrl) });
+        const flat = await runRain(["collections", "--json"], { env: authEnv(server.baseUrl) });
+        const tree = await runRain(["collections", "--tree", "--json"], { env: authEnv(server.baseUrl) });
         expectSuccess(flat);
         expectSuccess(tree);
       });
@@ -679,7 +679,7 @@ describe("rain cli contract", () => {
             ]
           }
         }));
-        const result = runRain(["collections", "--ids-only", "--json"], { env: authEnv(server.baseUrl) });
+        const result = await runRain(["collections", "--ids-only", "--json"], { env: authEnv(server.baseUrl) });
         const payload = expectSuccess(result);
         expect(payload.data).toEqual([123, 456]);
       });
@@ -688,8 +688,8 @@ describe("rain cli contract", () => {
     test("tags sorts by count or name", async () => {
       await withMockRaindrop(async (server) => {
         server.all("/*", () => ({ json: { items: [{ tag: "testing", count: 42 }, { tag: "api", count: 100 }] } }));
-        const byCount = runRain(["tags", "--sort", "count", "--json"], { env: authEnv(server.baseUrl) });
-        const byName = runRain(["tags", "--sort", "name", "--json"], { env: authEnv(server.baseUrl) });
+        const byCount = await runRain(["tags", "--sort", "count", "--json"], { env: authEnv(server.baseUrl) });
+        const byName = await runRain(["tags", "--sort", "name", "--json"], { env: authEnv(server.baseUrl) });
         const countPayload = expectSuccess(byCount);
         const namePayload = expectSuccess(byName);
         expect(Array.isArray(countPayload.data)).toBe(true);
@@ -703,7 +703,7 @@ describe("rain cli contract", () => {
           expect(request.query.get("collection")).toBe("123");
           return { json: { items: [{ tag: "api", count: 1 }] } };
         });
-        const result = runRain(["tags", "123", "--json"], { env: authEnv(server.baseUrl) });
+        const result = await runRain(["tags", "123", "--json"], { env: authEnv(server.baseUrl) });
         expectSuccess(result);
       });
     });
@@ -721,7 +721,7 @@ describe("rain cli contract", () => {
             lastChanged: "2024-06-15T10:30:00Z"
           }
         }));
-        const result = runRain(["status", "--json"], { env: authEnv(server.baseUrl) });
+        const result = await runRain(["status", "--json"], { env: authEnv(server.baseUrl) });
         const payload = expectSuccess(result);
         expect(payload.data).toMatchObject({
           total: 1570,
@@ -742,7 +742,7 @@ describe("rain cli contract", () => {
           expect(request.text).toContain("\"public\":true");
           return { json: { item: { id: 900, title: "Research" } } };
         });
-        const result = runRain(["collection", "create", "Research", "--parent", "123", "--public", "--json"], {
+        const result = await runRain(["collection", "create", "Research", "--parent", "123", "--public", "--json"], {
           env: authEnv(server.baseUrl)
         });
         expectSuccess(result);
@@ -757,7 +757,7 @@ describe("rain cli contract", () => {
           expect(request.text).toContain("\"view\":\"grid\"");
           return { json: { item: { id: 123, title: "New Name" } } };
         });
-        const result = runRain(
+        const result = await runRain(
           ["collection", "update", "123", "--title", "New Name", "--parent", "456", "--view", "grid", "--json"],
           { env: authEnv(server.baseUrl) }
         );
@@ -768,7 +768,7 @@ describe("rain cli contract", () => {
     test("deletes a collection tree", async () => {
       await withMockRaindrop(async (server) => {
         server.all("/*", () => ({ json: { result: true } }));
-        const result = runRain(["collection", "rm", "123", "--json"], { env: authEnv(server.baseUrl) });
+        const result = await runRain(["collection", "rm", "123", "--json"], { env: authEnv(server.baseUrl) });
         expectSuccess(result);
       });
     });
@@ -776,15 +776,15 @@ describe("rain cli contract", () => {
     test("collection rm returns NOT_FOUND + exit 1 when missing", async () => {
       await withMockRaindrop(async (server) => {
         server.all("/*", () => ({ status: 404, json: { error: "not found" } }));
-        const result = runRain(["collection", "rm", "999999", "--json"], { env: authEnv(server.baseUrl) });
+        const result = await runRain(["collection", "rm", "999999", "--json"], { env: authEnv(server.baseUrl) });
         expectError(result, "NOT_FOUND", 1);
       });
     });
   });
 
   describe("robot-docs", () => {
-    test("returns schema with commands, flags, exit codes, and auth hints", () => {
-      const result = runRain(["robot-docs", "--json"]);
+    test("returns schema with commands, flags, exit codes, and auth hints", async () => {
+      const result = await runRain(["robot-docs", "--json"]);
       const payload = expectSuccess(result);
       expect(payload.data).toMatchObject({
         commands: expect.any(Object),
@@ -799,7 +799,7 @@ describe("rain cli contract", () => {
     test("exists single URL returns exit 0 when found", async () => {
       await withMockRaindrop(async (server) => {
         server.all("/*", () => ({ json: { found: { id: 483920 } } }));
-        const result = runRain(["exists", "https://example.com", "--json"], {
+        const result = await runRain(["exists", "https://example.com", "--json"], {
           env: authEnv(server.baseUrl)
         });
         const payload = expectSuccess(result, 0);
@@ -810,7 +810,7 @@ describe("rain cli contract", () => {
     test("exists single URL returns exit 1 with ok=true and data=null when missing", async () => {
       await withMockRaindrop(async (server) => {
         server.all("/*", () => ({ json: { found: null } }));
-        const result = runRain(["exists", "https://not-saved.com", "--json"], {
+        const result = await runRain(["exists", "https://not-saved.com", "--json"], {
           env: authEnv(server.baseUrl)
         });
         const payload = expectSuccess(result, 1);
@@ -833,7 +833,7 @@ describe("rain cli contract", () => {
           };
         });
 
-        const result = runRain(["exists", "--json"], {
+        const result = await runRain(["exists", "--json"], {
           env: authEnv(server.baseUrl),
           stdin: "https://a.com\nhttps://b.com\n"
         });
@@ -854,7 +854,7 @@ describe("rain cli contract", () => {
           return { json: { found: { id: 483920 } } };
         });
 
-        const result = runRain(["exists", "http://example.com/path/?utm_source=x", "--json"], {
+        const result = await runRain(["exists", "http://example.com/path/?utm_source=x", "--json"], {
           env: authEnv(server.baseUrl)
         });
         expectSuccess(result, 0);
@@ -869,7 +869,7 @@ describe("rain cli contract", () => {
             tags: ["typescript", "testing"]
           }
         }));
-        const result = runRain(["suggest", "https://example.com/article", "--json"], {
+        const result = await runRain(["suggest", "https://example.com/article", "--json"], {
           env: authEnv(server.baseUrl)
         });
         const payload = expectSuccess(result);
@@ -880,8 +880,8 @@ describe("rain cli contract", () => {
       });
     });
 
-    test("suggest rejects malformed urls with INVALID_ARGS + exit 2", () => {
-      const result = runRain(["suggest", "not-a-url", "--json"]);
+    test("suggest rejects malformed urls with INVALID_ARGS + exit 2", async () => {
+      const result = await runRain(["suggest", "not-a-url", "--json"]);
       expectError(result, "INVALID_ARGS", 2);
     });
   });
@@ -897,7 +897,7 @@ describe("rain cli contract", () => {
             ]
           }
         }));
-        const result = runRain(["highlights", "--color", "yellow", "--json"], {
+        const result = await runRain(["highlights", "--color", "yellow", "--json"], {
           env: authEnv(server.baseUrl)
         });
         const payload = expectSuccess(result);
@@ -911,7 +911,7 @@ describe("rain cli contract", () => {
           expect(request.query.get("limit")).toBe("50");
           return { json: { items: [] } };
         });
-        const result = runRain(["highlights", "--limit", "50", "--json"], {
+        const result = await runRain(["highlights", "--limit", "50", "--json"], {
           env: authEnv(server.baseUrl)
         });
         expectSuccess(result);
@@ -921,7 +921,7 @@ describe("rain cli contract", () => {
     test("export --format csv returns csv text output", async () => {
       await withMockRaindrop(async (server) => {
         server.all("/*", () => ({ json: { items: [SAMPLE_BOOKMARK], count: 1, page: 0 } }));
-        const result = runRain(["export", "--format", "csv", "--fields", "id,title,link", "--json"], {
+        const result = await runRain(["export", "--format", "csv", "--fields", "id,title,link", "--json"], {
           env: authEnv(server.baseUrl)
         });
         const payload = expectSuccess(result);
@@ -936,15 +936,15 @@ describe("rain cli contract", () => {
           expect(request.query.get("collection")).toBe("123");
           return { json: { items: [SAMPLE_BOOKMARK], count: 1, page: 0 } };
         });
-        const result = runRain(["export", "123", "--json"], {
+        const result = await runRain(["export", "123", "--json"], {
           env: authEnv(server.baseUrl)
         });
         expectSuccess(result);
       });
     });
 
-    test("export rejects --fields when format is csv", () => {
-      const result = runRain(["export", "--format", "csv", "--fields", "id,title", "--json"]);
+    test("export rejects --fields when format is csv", async () => {
+      const result = await runRain(["export", "--format", "csv", "--fields", "id,title", "--json"]);
       expectError(result, "INVALID_ARGS", 2);
     });
 
@@ -958,7 +958,7 @@ describe("rain cli contract", () => {
             ]
           }
         }));
-        const result = runRain(["watch", "--since", "2024-06-15T00:00:00Z", "--json"], {
+        const result = await runRain(["watch", "--since", "2024-06-15T00:00:00Z", "--json"], {
           env: authEnv(server.baseUrl)
         });
         const payload = expectSuccess(result);
@@ -974,7 +974,7 @@ describe("rain cli contract", () => {
           expect(request.query.get("collection")).toBe("123");
           return { json: { items: [] } };
         });
-        const result = runRain(["watch", "--since", "2024-06-15T00:00:00Z", "--collection", "123", "--json"], {
+        const result = await runRain(["watch", "--since", "2024-06-15T00:00:00Z", "--collection", "123", "--json"], {
           env: authEnv(server.baseUrl)
         });
         expectSuccess(result);
@@ -987,7 +987,7 @@ describe("rain cli contract", () => {
           expect(request.query.get("sort")).toBe("-lastUpdate");
           return { json: { items: [] } };
         });
-        const result = runRain(["watch", "--since", "2024-06-15T00:00:00Z", "--json"], {
+        const result = await runRain(["watch", "--since", "2024-06-15T00:00:00Z", "--json"], {
           env: authEnv(server.baseUrl)
         });
         expectSuccess(result);
@@ -1019,7 +1019,7 @@ describe("rain cli contract", () => {
           };
         });
 
-        const result = runRain(["watch", "--since", "2024-06-15T00:00:00Z", "--json"], {
+        const result = await runRain(["watch", "--since", "2024-06-15T00:00:00Z", "--json"], {
           env: authEnv(server.baseUrl)
         });
         const payload = expectSuccess(result);
@@ -1035,7 +1035,7 @@ describe("rain cli contract", () => {
     test("maps HTTP 401/403 to AUTH_INVALID + exit 3", async () => {
       await withMockRaindrop(async (server) => {
         server.setFallback(() => ({ status: 401, json: { error: "unauthorized" } }));
-        const result = runRain(["search", "typescript", "--json"], {
+        const result = await runRain(["search", "typescript", "--json"], {
           env: authEnv(server.baseUrl)
         });
         expectError(result, "AUTH_INVALID", 3);
@@ -1045,7 +1045,7 @@ describe("rain cli contract", () => {
     test("maps HTTP 429 to RATE_LIMITED + exit 4", async () => {
       await withMockRaindrop(async (server) => {
         server.setFallback(() => ({ status: 429, json: { error: "rate limit" } }));
-        const result = runRain(["search", "typescript", "--json"], {
+        const result = await runRain(["search", "typescript", "--json"], {
           env: authEnv(server.baseUrl)
         });
         expectError(result, "RATE_LIMITED", 4);
@@ -1055,15 +1055,15 @@ describe("rain cli contract", () => {
     test("maps HTTP 5xx to API_ERROR + exit 5", async () => {
       await withMockRaindrop(async (server) => {
         server.setFallback(() => ({ status: 500, json: { error: "boom" } }));
-        const result = runRain(["search", "typescript", "--json"], {
+        const result = await runRain(["search", "typescript", "--json"], {
           env: authEnv(server.baseUrl)
         });
         expectError(result, "API_ERROR", 5);
       });
     });
 
-    test("maps transport failures to NETWORK_ERROR + exit 5", () => {
-      const result = runRain(["search", "typescript", "--json"], {
+    test("maps transport failures to NETWORK_ERROR + exit 5", async () => {
+      const result = await runRain(["search", "typescript", "--json"], {
         env: {
           RAINDROP_TOKEN: "test-token",
           RAINDROP_API_BASE: "http://127.0.0.1:9"
@@ -1075,7 +1075,7 @@ describe("rain cli contract", () => {
     test("maps not-found resource lookups to NOT_FOUND + exit 1", async () => {
       await withMockRaindrop(async (server) => {
         server.setFallback(() => ({ status: 404, json: { error: "missing" } }));
-        const result = runRain(["get", "999999", "--json"], {
+        const result = await runRain(["get", "999999", "--json"], {
           env: authEnv(server.baseUrl)
         });
         expectError(result, "NOT_FOUND", 1);
