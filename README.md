@@ -25,6 +25,15 @@ Prerequisite:
 
 - Bun `>=1.3.0`
 
+One-line installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ratacat/raindrop-cli/main/scripts/install.sh | bash
+```
+
+This installs project files to `~/.local/share/raindrop-cli` and creates `~/.local/bin/rain`.
+Run the same command again to update.
+
 Install dependencies:
 
 ```bash
